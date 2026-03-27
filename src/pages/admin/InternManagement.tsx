@@ -1,0 +1,360 @@
+import React, { useEffect, useState } from 'react';
+import { getInterns, createIntern, updateIntern, deleteIntern } from '@/lib/api';
+import { getPending } from '@/lib/auth';
+import { Intern } from '@/data/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+
+const emptyIntern: Intern = {
+  id: '', name: '', email: '', phone: '', department: '', startDate: '', endDate: '', status: 'active', avatar: '', group: '',
+};
+
+const normalizeInternId = (id: string, index: number) => {
+  if (id.startsWith('IN')) return id;
+  return `IN${String(index + 1).padStart(3, '0')}`;
+};
+
+const nextInternId = (interns: Intern[]) => {
+  const regex = /^IN(\d+)$/;
+  const max = interns.reduce((acc, intern) => {
+    const m = intern.id.match(regex);
+    if (m) {
+      const n = Number(m[1]);
+      return Number.isNaN(n) ? acc : Math.max(acc, n);
+    }
+    return acc;
+  }, 0);
+  return `IN${String(max + 1).padStart(3, '0')}`;
+};
+
+const InternManagement = () => {
+  const [interns, setInterns] = useState<Intern[]>([]);
+  const [groups, setGroups] = useState<string[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Intern | null>(null);
+  const [form, setForm] = useState<Intern>(emptyIntern);
+  const [durationMonths, setDurationMonths] = useState<number>(0);
+  const [isCustomGroup, setIsCustomGroup] = useState(false);
+
+  const getDurationMonths = (start: string, end: string) => {
+    if (!start || !end) return 0;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    return Math.max(0, (endDate.getFullYear() - startDate.getFullYear()) * 12 + endDate.getMonth() - startDate.getMonth());
+  };
+
+  const addMonthsToDate = (dateStr: string, months: number) => {
+    if (!dateStr) return dateStr;
+    const d = new Date(dateStr);
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().split('T')[0];
+  };
+
+  const filtered = interns.filter(i =>
+    i.name.toLowerCase().includes(search.toLowerCase()) ||
+    i.department.toLowerCase().includes(search.toLowerCase()) ||
+    i.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ 
+      ...emptyIntern,
+      id: nextInternId(interns)
+    });
+    setDurationMonths(0);
+    setIsCustomGroup(false);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (intern: Intern) => {
+    setEditing(intern);
+    setForm(intern);
+    setDurationMonths(getDurationMonths(intern.startDate, intern.endDate));
+    setIsCustomGroup(intern.group !== '' && !groups.includes(intern.group));
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.id.trim()) {
+      toast.error('Intern ID is required');
+      return;
+    }
+    if (!form.name || !form.email || !form.startDate || !form.endDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    (async () => {
+      try {
+        // duplicate id/email guard
+        const existingById = interns.some(i => i.id === form.id && (!editing || i.id !== editing.id));
+        if (existingById) {
+          toast.error('Intern ID already assigned');
+          return;
+        }
+        const existingByEmail = interns.some(i => i.email === form.email && (!editing || i.id !== editing.id));
+        if (existingByEmail) {
+          toast.error('Intern email already assigned');
+          return;
+        }
+
+        const payloadData = { ...form };
+
+        // if duration selected, set endDate accordingly
+        if (durationMonths > 0 && form.startDate) {
+          payloadData.endDate = addMonthsToDate(form.startDate, durationMonths);
+        }
+
+        if (editing) {
+          const updated = await updateIntern(editing.id, payloadData);
+          setInterns(prev => prev.map(i => i.id === editing.id ? updated : i));
+          toast.success('Intern updated');
+        } else {
+          const payload = { ...payloadData, id: form.id };
+          const created = await createIntern(payload);
+          const createdWithId = { ...created, id: form.id };
+          setInterns(prev => [...prev, createdWithId]);
+          toast.success('Intern added');
+        }
+
+        if (payloadData.group && !groups.includes(payloadData.group)) {
+          setGroups(prev => [...prev, payloadData.group]);
+        }
+
+        setDialogOpen(false);
+      } catch (err: any) {
+        toast.error(err?.message || 'Save failed');
+      }
+    })();
+  };
+
+  const handleDelete = (id: string) => {
+    (async () => {
+      try {
+        await deleteIntern(id);
+        setInterns(prev => prev.filter(i => i.id !== id));
+        toast.success('Intern removed');
+      } catch (err: any) {
+        // in case deferred sync issue, try refresh list
+        try {
+          const fresh = await getInterns();
+          setInterns(fresh.map((intern, idx) => ({ ...intern, id: normalizeInternId(intern.id, idx) })));
+        } catch {
+          // ignore
+        }
+        toast.error(err?.message || 'Delete failed');
+      }
+    })();
+  };
+
+  const updateField = (field: string, value: string) => {
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'startDate' && durationMonths > 0) {
+        next.endDate = addMonthsToDate(value, durationMonths);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [data, pending] = await Promise.all([getInterns(), getPending()]);
+        const normalized = data.map((intern, idx) => ({ ...intern, id: normalizeInternId(intern.id || '', idx) }));
+        const deduped: Intern[] = [];
+        const seen = new Set<string>();
+        normalized.forEach(intern => {
+          if (seen.has(intern.id)) return;
+          seen.add(intern.id);
+          deduped.push(intern);
+        });
+        if (deduped.length !== normalized.length) {
+          toast.success('Duplicate intern entries removed by ID (kept first occurrence)');
+        }
+        setInterns(deduped);
+        setGroups(Array.from(new Set(deduped.map(intern => intern.group).filter(Boolean))));
+        setPendingUsers(pending || []);
+      } catch (err: any) {
+        toast.error('Could not load interns');
+      }
+    })();
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Intern Management</h1>
+          <p className="text-muted-foreground mt-1">{interns.length} interns total</p>
+        </div>
+        <Button onClick={openAdd}><Plus className="w-4 h-4 mr-2" />Add Intern</Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input placeholder="Search interns..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                      <TableHead>ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Group</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No interns found</TableCell></TableRow>
+                ) : filtered.map(intern => (
+                  <TableRow key={intern.id}>
+                    <TableCell className="text-muted-foreground">{intern.id}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-foreground">{intern.name}</p>
+                        <p className="text-xs text-muted-foreground">{intern.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{intern.department}</TableCell>
+                    <TableCell className="text-muted-foreground">{intern.group || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {intern.startDate} → {intern.endDate} ({getDurationMonths(intern.startDate, intern.endDate)} mo)
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={intern.status === 'active' ? 'default' : 'secondary'}>
+                        {intern.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(intern)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(intern.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Edit Intern' : 'Add New Intern'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Intern ID *</Label>
+              <Input value={form.id} onChange={e => updateField('id', e.target.value)} placeholder="e.g. IN001" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input value={form.name} onChange={e => updateField('name', e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Phone No.</Label>
+                <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Input value={form.department} onChange={e => updateField('department', e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date *</Label>
+                <Input type="date" value={form.startDate} onChange={e => updateField('startDate', e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date *</Label>
+                <Input type="date" value={form.endDate} onChange={e => updateField('endDate', e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Group</Label>
+                <Select value={isCustomGroup ? '__new' : form.group} onValueChange={v => {
+                  if (v === '__new') {
+                    setIsCustomGroup(true);
+                    updateField('group', '');
+                  } else {
+                    setIsCustomGroup(false);
+                    updateField('group', v);
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
+                  <SelectContent>
+                    {groups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    <SelectItem value="__new">Create new group</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isCustomGroup && (
+                  <Input placeholder="New group name" value={form.group} onChange={e => updateField('group', e.target.value)} />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Duration (months)</Label>
+                <Select value={String(durationMonths)} onValueChange={v => {
+                  const months = Number(v);
+                  setDurationMonths(months);
+                  if (form.startDate) {
+                    updateField('endDate', addMonthsToDate(form.startDate, months));
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 month</SelectItem>
+                    <SelectItem value="2">2 months</SelectItem>
+                    <SelectItem value="3">3 months</SelectItem>
+                    <SelectItem value="6">6 months</SelectItem>
+                    <SelectItem value="12">1 year</SelectItem>
+                    <SelectItem value="24">2 years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={v => updateField('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="disabled">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSave} className="mt-2">{editing ? 'Update' : 'Add'} Intern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default InternManagement;
