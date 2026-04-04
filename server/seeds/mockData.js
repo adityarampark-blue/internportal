@@ -41,7 +41,7 @@ exports.mockAttendance = [
   { id: '3', internId: '1', date: '2025-02-12', status: 'present', checkIn: '09:05 AM' },
   { id: '4', internId: '1', date: '2025-02-11', status: 'absent', checkIn: '' },
   { id: '5', internId: '2', date: '2025-02-14', status: 'present', checkIn: '09:30 AM' },
-  { id: '6', internId: '2', date: '2025-02-13', status: 'late', checkIn: '10:15 AM' },
+  { id: '6', internId: '2', date: '2025-02-13', status: 'present', checkIn: '10:15 AM' },
   { id: '7', internId: '3', date: '2025-02-14', status: 'present', checkIn: '08:55 AM' }
 ];
 
