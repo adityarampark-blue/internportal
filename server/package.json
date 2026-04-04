@@ -17,5 +17,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "description": "This folder contains a minimal Express server using Mongoose for MongoDB.",
+  "author": "",
+  "license": "ISC"
 }
