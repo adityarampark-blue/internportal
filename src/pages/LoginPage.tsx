@@ -18,7 +18,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   if (isAuthenticated) {
-    return <Navigate to={user?.role === 'admin' ? '/admin' : '/intern'} replace />;
+    return <Navigate to="/admin/pending" replace />;
   }
 
   const validate = () => {
@@ -44,6 +44,7 @@ const LoginPage = () => {
           return;
         }
         toast.success('Welcome back!');
+        navigate('/admin/pending');
       }
     } catch (err) {
       setLoading(false);
