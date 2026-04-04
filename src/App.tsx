@@ -15,6 +15,7 @@ import AdminAttendance from "@/pages/admin/AdminAttendance";
 import AdminUpdates from "@/pages/admin/AdminUpdates";
 import PendingApprovals from "@/pages/admin/PendingApprovals";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
 import InternDashboard from "@/pages/intern/InternDashboard";
 import InternAttendance from "@/pages/intern/InternAttendance";
 import InternUpdates from "@/pages/intern/InternUpdates";
@@ -60,6 +61,7 @@ const AppRoutes = () => (
     <Route path="/" element={<Navigate to="/login" replace />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/signup" element={<Signup />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
     
     {/* Admin Routes */}
     <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />

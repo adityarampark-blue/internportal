@@ -118,6 +118,16 @@ const LoginPage = () => {
               </Button>
             </form>
 
+            <div className="mt-4 text-center text-sm">
+              <button 
+                type="button" 
+                onClick={() => navigate('/forgot-password')} 
+                className="text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <div className="mt-6 text-center text-sm">
               New user? <a href="/signup" className="text-primary font-semibold hover:underline">Create an account</a>
             </div>

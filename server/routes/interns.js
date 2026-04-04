@@ -4,7 +4,7 @@ const Intern = require('../models/Intern');
 
 router.get('/', async (req, res) => {
   try {
-    const interns = await Intern.find().sort({ createdAt: -1 });
+    const interns = await Intern.find().sort({ createdAt: 1 });
     res.json(interns);
   } catch (err) {
     res.status(500).json({ error: err.message });

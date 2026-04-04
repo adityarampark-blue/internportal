@@ -1,17 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { getPending, approveUser, rejectUser } from '@/lib/auth';
+import { getInterns } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 const PendingApprovals = () => {
   const [pending, setPending] = useState<any[]>([]);
+  const [interns, setInterns] = useState<any[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<{ [key: string]: string }>({});
+  const [newGroups, setNewGroups] = useState<{ [key: string]: string }>({});
 
-  useEffect(() => { (async () => { try { const p = await getPending(); setPending(p); } catch (err:any) { toast.error('Could not load pending users'); } })(); }, []);
+  const groups = Array.from(new Set(interns.map(i => i.group).filter(g => g))).sort();
+
+  useEffect(() => { 
+    (async () => { 
+      try { 
+        const [p, i] = await Promise.all([getPending(), getInterns()]);
+        setPending(p); 
+        setInterns(i);
+      } catch (err:any) { 
+        toast.error('Could not load data'); 
+      } 
+    })(); 
+  }, []);
 
   const handleApprove = async (id: string) => {
+    const group = selectedGroups[id] === 'new' ? newGroups[id] || '' : selectedGroups[id] || '';
     try {
-      await approveUser(id);
+      await approveUser(id, group);
       setPending(prev => prev.filter(p => p.id !== id));
       toast.success('User approved');
     } catch (err) {
@@ -53,7 +72,26 @@ const PendingApprovals = () => {
                   <p className="font-medium">{u.name}</p>
                   <p className="text-xs text-muted-foreground">{u.email}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <div className="flex flex-col gap-1">
+                    <Select value={selectedGroups[u.id] || ''} onValueChange={(value) => setSelectedGroups(prev => ({ ...prev, [u.id]: value }))}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Select Group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                        <SelectItem value="new">New Group</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedGroups[u.id] === 'new' && (
+                      <Input 
+                        placeholder="Enter new group name" 
+                        value={newGroups[u.id] || ''} 
+                        onChange={e => setNewGroups(prev => ({ ...prev, [u.id]: e.target.value }))} 
+                        className="w-32"
+                      />
+                    )}
+                  </div>
                   <Button size="sm" variant="destructive" onClick={() => handleReject(u.id)}>
                     Reject
                   </Button>

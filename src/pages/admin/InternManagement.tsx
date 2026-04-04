@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
@@ -45,6 +46,8 @@ const InternManagement = () => {
   const [form, setForm] = useState<Intern>(emptyIntern);
   const [durationMonths, setDurationMonths] = useState<number>(0);
   const [isCustomGroup, setIsCustomGroup] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteInternId, setDeleteInternId] = useState<string | null>(null);
 
   const getDurationMonths = (start: string, end: string) => {
     if (!start || !end) return 0;
@@ -139,10 +142,16 @@ const InternManagement = () => {
   };
 
   const handleDelete = (id: string) => {
+    setDeleteInternId(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteInternId) return;
     (async () => {
       try {
-        await deleteIntern(id);
-        setInterns(prev => prev.filter(i => i.id !== id));
+        await deleteIntern(deleteInternId);
+        setInterns(prev => prev.filter(i => i.id !== deleteInternId));
         toast.success('Intern removed');
       } catch (err: any) {
         // in case deferred sync issue, try refresh list
@@ -153,6 +162,9 @@ const InternManagement = () => {
           // ignore
         }
         toast.error(err?.message || 'Delete failed');
+      } finally {
+        setDeleteConfirmOpen(false);
+        setDeleteInternId(null);
       }
     })();
   };
@@ -254,6 +266,23 @@ const InternManagement = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Intern?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this intern? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-2 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">

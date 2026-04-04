@@ -12,7 +12,7 @@ router.post('/register', async (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
     const id = Date.now().toString();
-    const u = new User({ id, name, email, role: 'intern', passwordHash: hash, approved: false });
+    const u = new User({ id, name, email, phone, department, role: 'intern', passwordHash: hash, approved: false });
     await u.save();
     res.status(201).json({ id: u.id, email: u.email, name: u.name, role: u.role, approved: u.approved });
   } catch (err) {
@@ -46,8 +46,21 @@ router.get('/pending', async (req, res) => {
 router.post('/approve/:id', async (req, res) => {
   try {
     const id = req.params.id;
+    const { group } = req.body;
     const u = await User.findOneAndUpdate({ id }, { approved: true }, { new: true });
     if (!u) return res.status(404).json({ error: 'User not found' });
+    // Create Intern record
+    const Intern = require('../models/Intern');
+    const intern = new Intern({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      department: u.department,
+      group: group || '',
+      status: 'active'
+    });
+    await intern.save();
     res.json({ id: u.id, email: u.email, name: u.name, approved: u.approved });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -65,7 +78,22 @@ const rejectHandler = async (req, res) => {
   }
 };
 
-router.delete('/reject/:id', rejectHandler);
-router.post('/reject/:id', rejectHandler); // allow POST for clients that don't support DELETE
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword, confirmPassword } = req.body;
+    if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password required' });
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+    const u = await User.findOne({ email });
+    if (!u) return res.status(404).json({ error: 'User not found' });
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(newPassword, salt);
+    await User.findOneAndUpdate({ email }, { passwordHash: hash });
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
