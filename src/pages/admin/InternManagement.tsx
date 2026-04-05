@@ -150,10 +150,12 @@ const InternManagement = () => {
     if (!deleteInternId) return;
     (async () => {
       try {
+        console.log('Attempting to delete intern with ID:', deleteInternId);
         await deleteIntern(deleteInternId);
         setInterns(prev => prev.filter(i => i.id !== deleteInternId));
         toast.success('Intern removed');
       } catch (err: any) {
+        console.error('Delete error:', err);
         // in case deferred sync issue, try refresh list
         try {
           const fresh = await getInterns();
