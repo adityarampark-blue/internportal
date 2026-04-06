@@ -84,8 +84,8 @@ const InternManagement = () => {
   const openAdd = () => {
     setEditing(null);
     setForm({ 
-      ...emptyIntern,
-      id: nextInternId(interns)
+      ...emptyIntern
+      // id is now auto-generated, so don't set it
     });
     setDurationMonths(0);
     setIsCustomGroup(false);
@@ -101,22 +101,13 @@ const InternManagement = () => {
   };
 
   const handleSave = () => {
-    if (!form.id.trim()) {
-      toast.error('Intern ID is required');
-      return;
-    }
     if (!form.name || !form.email || !form.startDate || !form.endDate) {
       toast.error('Please fill in all required fields');
       return;
     }
     (async () => {
       try {
-        // duplicate id/email guard
-        const existingById = interns.some(i => i.id === form.id && (!editing || i.id !== editing.id));
-        if (existingById) {
-          toast.error('Intern ID already assigned');
-          return;
-        }
+        // duplicate email guard (ID is now auto-generated)
         const existingByEmail = interns.some(i => i.email === form.email && (!editing || i.id !== editing.id));
         if (existingByEmail) {
           toast.error('Intern email already assigned');
@@ -135,10 +126,10 @@ const InternManagement = () => {
           setInterns(prev => prev.map(i => i.id === editing.id ? updated : i));
           toast.success('Intern updated');
         } else {
-          const payload = { ...payloadData, id: form.id };
+          // Remove id from payload since it's auto-generated
+          const { id, ...payload } = payloadData;
           const created = await createIntern(payload);
-          const createdWithId = { ...created, id: form.id };
-          setInterns(prev => [...prev, createdWithId]);
+          setInterns(prev => [...prev, created]);
           toast.success('Intern added');
         }
 
@@ -306,7 +297,7 @@ const InternManagement = () => {
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
               <Label>Intern ID *</Label>
-              <Input value={formatInternId(form.id)} onChange={e => updateField('id', e.target.value)} placeholder="Auto-generated ID" readOnly={!editing} />
+              <Input value={editing ? formatInternId(form.id) : 'Auto-generated'} onChange={e => updateField('id', e.target.value)} placeholder="Auto-generated ID" readOnly={!editing} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -352,8 +343,9 @@ const InternManagement = () => {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">-- Select a group --</SelectItem>
                     {groups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                    <SelectItem value="__new">Create new group</SelectItem>
+                    <SelectItem value="__new">+ Create new group</SelectItem>
                   </SelectContent>
                 </Select>
                 {isCustomGroup && (
@@ -381,6 +373,25 @@ const InternManagement = () => {
                 </Select>
               </div>
             </div>
+            {form.group && !isCustomGroup && (
+              <div className="space-y-2">
+                <Label>Current members in this group</Label>
+                <div className="border rounded-lg p-3 bg-muted/50 max-h-40 overflow-y-auto">
+                  {interns.filter(i => i.group === form.group).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No members in this group yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {interns.filter(i => i.group === form.group).map(intern => (
+                        <div key={intern.id} className="text-sm p-2 hover:bg-accent rounded">
+                          <span className="font-medium">{intern.name}</span>
+                          <span className="text-muted-foreground ml-2">({intern.email})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={v => updateField('status', v)}>

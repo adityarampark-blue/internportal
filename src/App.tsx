@@ -24,6 +24,33 @@ import InternDocuments from "@/pages/intern/InternDocuments";
 import InternMeetings from "@/pages/intern/InternMeetings";
 import NotFound from "@/pages/NotFound";
 
+
+
+// Example in App.tsx
+
+
+// In your routes
+<Route path="/documents" element={<AdminDocuments />} />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, role }: { children: React.ReactNode; role: 'admin' | 'intern' }) => {

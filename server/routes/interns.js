@@ -21,9 +21,42 @@ router.post('/', async (req, res) => {
   try {
     const data = req.body;
     console.log('Creating intern with data:', data);
-    const existing = await Intern.findOne({ id: data.id });
-    if (existing) return res.status(409).json({ error: 'Intern with this id already exists' });
-    const intern = new Intern(data);
+    
+    // Get all existing interns to find the highest ID
+    const allInterns = await Intern.find({}, 'id').sort({ id: -1 });
+    
+    // Extract numeric parts from IDs (support both IN001 format and plain numbers)
+    let maxId = 0;
+    for (const intern of allInterns) {
+      const idStr = intern.id;
+      let numericId = 0;
+      
+      // Check if it's INXXX format
+      const match = idStr.match(/^IN(\d+)$/i);
+      if (match) {
+        numericId = parseInt(match[1], 10);
+      } else {
+        // Try to parse as plain number
+        const num = parseInt(idStr, 10);
+        if (!isNaN(num)) {
+          numericId = num;
+        }
+      }
+      
+      if (numericId > maxId) {
+        maxId = numericId;
+      }
+    }
+    
+    // Generate next sequential ID
+    const nextId = `IN${String(maxId + 1).padStart(3, '0')}`;
+    
+    // Create intern with auto-generated ID
+    const internData = { ...data, id: nextId };
+    const existing = await Intern.findOne({ id: nextId });
+    if (existing) return res.status(409).json({ error: 'Intern with this auto-generated id already exists' });
+    
+    const intern = new Intern(internData);
     await intern.save();
     console.log('Created intern:', intern);
     res.status(201).json(intern);

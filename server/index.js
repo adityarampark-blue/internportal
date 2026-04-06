@@ -2,18 +2,43 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with original extension
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 const itemsRouter = require('./routes/items');
 const internsRouter = require('./routes/interns');
 const tasksRouter = require('./routes/tasks');
 const meetingsRouter = require('./routes/meetings');
-const documentsRouter = require('./routes/documents');
+const documentsRouter = require('./routes/documents')(upload);
 const attendanceRouter = require('./routes/attendance');
 const updatesRouter = require('./routes/updates');
 const authRouter = require('./routes/auth');
