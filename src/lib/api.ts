@@ -48,6 +48,7 @@ export async function updateMeeting(id: string, payload: Record<string, unknown>
 export async function getDocuments() { const res = await fetch(`${API_BASE}/documents`); if (!res.ok) throw new Error('Failed to fetch documents'); return res.json(); }
 export async function createDocument(payload: Record<string, unknown>) { const res = await fetch(`${API_BASE}/documents`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) throw new Error('Failed to create document'); return res.json(); }
 export async function updateDocument(id: string, payload: Record<string, unknown>) { const res = await fetch(`${API_BASE}/documents/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) throw new Error('Failed to update document'); return res.json(); }
+export async function deleteDocument(id: string) { const res = await fetch(`${API_BASE}/documents/${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error('Failed to delete document'); return res.json(); }
 
 // Attendance
 export async function createAttendance(payload: Record<string, unknown>) { const res = await fetch(`${API_BASE}/attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) throw new Error('Failed to create attendance'); return res.json(); }
@@ -58,4 +59,4 @@ export async function getUpdates() { const res = await fetch(`${API_BASE}/update
 export async function createUpdate(payload: Record<string, unknown>) { const res = await fetch(`${API_BASE}/updates`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) throw new Error('Failed to create update'); return res.json(); }
 export async function updateUpdate(id: string, payload: Record<string, unknown>) { const res = await fetch(`${API_BASE}/updates/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) throw new Error('Failed to update update'); return res.json(); }
 
-export const api = { getInterns, createIntern, updateIntern, deleteIntern, getTasks, createTask, updateTask, getMeetings, createMeeting, updateMeeting, getDocuments, createDocument, updateDocument, getAttendance, createAttendance, updateAttendance, getUpdates, createUpdate, updateUpdate };
+export const api = { getInterns, createIntern, updateIntern, deleteIntern, getTasks, createTask, updateTask, getMeetings, createMeeting, updateMeeting, getDocuments, createDocument, updateDocument, deleteDocument, getAttendance, createAttendance, updateAttendance, getUpdates, createUpdate, updateUpdate };

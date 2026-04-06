@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getDocuments, createDocument, getInterns } from '@/lib/api';
+import { getDocuments, createDocument, getInterns, deleteDocument } from '@/lib/api';
 import { Document, Intern } from '@/data/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, FileText, Upload } from 'lucide-react';
+import { Plus, FileText, Upload, Eye, Download, Trash2 } from 'lucide-react';
 
 const AdminDocuments = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -17,6 +18,8 @@ const AdminDocuments = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: '', category: '', group: '', assignedTo: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
 
   const handleAdd = async () => {
     const name = selectedFile ? selectedFile.name : form.name;
@@ -45,6 +48,47 @@ const AdminDocuments = () => {
       toast.success('Document uploaded');
     } catch (err:any) {
       toast.error(err?.message || 'Upload failed');
+    }
+  };
+
+  const handleViewDocument = (doc: Document) => {
+    try {
+      const mockBlob = new Blob([`This is a preview of: ${doc.name}`], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(mockBlob);
+      window.open(url, '_blank');
+      toast.success(`Opening ${doc.name}`);
+    } catch (err: any) {
+      toast.error('Failed to open document');
+    }
+  };
+
+  const handleDownloadDocument = (doc: Document) => {
+    try {
+      const mockBlob = new Blob([`Document: ${doc.name}\nCategory: ${doc.category}\nSize: ${doc.size}\nUploaded: ${doc.uploadedAt}`], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(mockBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${doc.name}`);
+    } catch (err: any) {
+      toast.error('Download failed');
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!deleteDocId) return;
+    try {
+      await deleteDocument(deleteDocId);
+      setDocuments(prev => prev.filter(d => d.id !== deleteDocId));
+      setDeleteConfirmOpen(false);
+      setDeleteDocId(null);
+      toast.success('Document deleted');
+    } catch (err: any) {
+      toast.error(err?.message || 'Delete failed');
     }
   };
 
@@ -143,10 +187,38 @@ const AdminDocuments = () => {
                   Assigned: {doc.assignedTo.map(id => interns.find(i => i.id === id)?.name || id).join(', ')}
                 </p>
               )}
+              <div className="flex gap-2 shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)} title="View document">
+                  <Eye className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)} title="Download document">
+                  <Download className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setDeleteDocId(doc.id); setDeleteConfirmOpen(true); }} title="Delete document">
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDocument} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
 
     </div>

@@ -2,11 +2,41 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockDocuments, mockInterns } from '@/data/mockData';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, Eye, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 const InternDocuments = () => {
   const { user } = useAuth();
   const docs = mockDocuments.filter(d => d.assignedTo.length === 0 || d.assignedTo.includes(user?.id || ''));
+
+  const handleViewDocument = (doc: any) => {
+    try {
+      const mockBlob = new Blob([`This is a preview of: ${doc.name}`], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(mockBlob);
+      window.open(url, '_blank');
+      toast.success(`Opening ${doc.name}`);
+    } catch (err: any) {
+      toast.error('Failed to open document');
+    }
+  };
+
+  const handleDownloadDocument = (doc: any) => {
+    try {
+      const mockBlob = new Blob([`Document: ${doc.name}\nCategory: ${doc.category}\nSize: ${doc.size}\nUploaded: ${doc.uploadedAt}`], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(mockBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${doc.name}`);
+    } catch (err: any) {
+      toast.error('Download failed');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -32,6 +62,14 @@ const InternDocuments = () => {
                     <span>{doc.category}</span>
                     <span>{doc.uploadedAt}</span>
                   </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)} title="View document">
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)} title="Download document">
+                    <Download className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
