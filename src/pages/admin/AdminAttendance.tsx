@@ -31,19 +31,6 @@ type AdminAttendanceRecord = { id: string; internId: string; date?: string; stat
 
 type InternInfo = { id: string; name: string; group: string };
 
-// Normalize Intern ID to match website format (e.g., IN001, IN002, etc.)
-const normalizeInternId = (id: string): string => {
-  if (!id) return id;
-  if (id.startsWith('IN')) return id;
-  // If it's just a number, format it as IN###
-  const numMatch = id.match(/(\d+)/);
-  if (numMatch) {
-    const num = numMatch[1];
-    return `IN${String(num).padStart(3, '0')}`;
-  }
-  return id;
-};
-
 const AdminAttendance = () => {
   const [attendance, setAttendance] = useState<AdminAttendanceRecord[]>([]);
   const [interns, setInterns] = useState<InternInfo[]>([]);
@@ -61,18 +48,11 @@ const AdminAttendance = () => {
     (async () => {
       try {
         const [a, i] = await Promise.all([getAttendance(), getInterns()]);
-        // Normalize intern IDs to match website display
-        const normalizedInterns = (i as InternInfo[]).map((intern, idx) => ({
-          ...intern,
-          id: normalizeInternId(intern.id || `${idx + 1}`)
-        }));
         setAttendance((a as AdminAttendanceRecord[]).map(item => ({
           ...item,
-          status: item.status === 'late' ? 'present' : item.status,
-          // Normalize internId in attendance records
-          internId: normalizeInternId(item.internId)
+          status: item.status === 'late' ? 'present' : item.status
         })));
-        setInterns(normalizedInterns);
+        setInterns(i as InternInfo[]);
       } catch (err) {
         if (err instanceof Error) {
           console.error('Failed to load attendance', err.message);
@@ -186,11 +166,8 @@ const AdminAttendance = () => {
       
       const data = groupAttendance.map(a => {
         const intern = interns.find(i => i.id === a.internId);
-        const normalizedId = normalizeInternId(a.internId);
-        return {
-          'Intern ID': normalizedId,
-          'Name': intern?.name || 'Unknown',
-          'Group': group,
+          return {
+            'Intern ID': a.internId,
           'Date': a.date || '',
           'Status': a.status,
           'Check In': a.checkIn || '—'

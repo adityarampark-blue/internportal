@@ -8,20 +8,6 @@ import { getPending, approveUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { Intern } from '@/data/types';
 
-const normalizeInternId = (id: string, index: number) => {
-  if (!id) return `IN${String(index + 1).padStart(3, '0')}`;
-  if (id.startsWith('IN')) return id;
-  return `IN${String(index + 1).padStart(3, '0')}`;
-};
-
-const getNormalizedId = (id: string) => {
-  if (!id) return id;
-  if (id.startsWith('IN')) return id;
-  const num = parseInt(id);
-  if (isNaN(num)) return id;
-  return `IN${String(num).padStart(3, '0')}`;
-};
-
 const AdminDashboard = () => {
   type AttendanceRecord = { id: string; internId: string; date: string; status: 'present' | 'absent'; checkIn?: string };
   type Activity = { message: string; time: string };
@@ -46,7 +32,7 @@ const AdminDashboard = () => {
         getAttendance(),
         getPending(),
       ]);
-      const normalizedInterns = loadInterns.map((intern, idx) => ({ ...intern, id: normalizeInternId(intern.id, idx) }));
+      const normalizedInterns = loadInterns.map((intern, idx) => ({ ...intern }));
       setInterns(normalizedInterns || []);
       setAttendance((loadAttendance || []).map(a => ({ ...a, status: a.status === 'late' ? 'present' : a.status })));
       setPendingCount((pending || []).length);
@@ -193,7 +179,7 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {attendance.filter(a => a.date === today && a.status === 'present').map(a => {
-                      const intern = interns.find(i => i.id === getNormalizedId(a.internId));
+                      const intern = interns.find(i => i.id === a.internId);
                       return (
                         <div key={a.id} className="p-3 rounded-lg bg-green-50 border border-green-100">
                           <p className="text-sm font-semibold">{intern?.id || a.internId} - {intern?.name || 'Unknown'}</p>

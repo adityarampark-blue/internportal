@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Intern = require('../models/Intern');
+const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const DailyUpdate = require('../models/DailyUpdate');
+const Task = require('../models/Task');
+const Document = require('../models/Document');
 
 router.get('/', async (req, res) => {
   try {
@@ -70,24 +73,73 @@ router.delete('/:id', async (req, res) => {
     const attendanceDeleted = await Attendance.deleteMany({ internId: id });
     console.log('Attendance records deleted:', attendanceDeleted.deletedCount);
     
-    // Also try deleting by the original ID if different
-    const attendanceDeleted2 = await Attendance.deleteMany({ internId: removed.id });
-    console.log('Attendance records deleted (by removed.id):', attendanceDeleted2.deletedCount);
+    // Also try deleting by the resolved intern ID if different
+    const attendanceDeleted2 = id !== removed.id ? await Attendance.deleteMany({ internId: removed.id }) : { deletedCount: 0 };
+    if (attendanceDeleted2.deletedCount) {
+      console.log('Attendance records deleted (by removed.id):', attendanceDeleted2.deletedCount);
+    }
     
     // Delete all daily updates for this intern
     const updatesDeleted = await DailyUpdate.deleteMany({ internId: id });
     console.log('Daily updates deleted:', updatesDeleted.deletedCount);
     
-    // Also try deleting by the original ID if different
-    const updatesDeleted2 = await DailyUpdate.deleteMany({ internId: removed.id });
-    console.log('Daily updates deleted (by removed.id):', updatesDeleted2.deletedCount);
+    const updatesDeleted2 = id !== removed.id ? await DailyUpdate.deleteMany({ internId: removed.id }) : { deletedCount: 0 };
+    if (updatesDeleted2.deletedCount) {
+      console.log('Daily updates deleted (by removed.id):', updatesDeleted2.deletedCount);
+    }
+
+    // Remove the intern from task and document assignments
+    const tasksUpdated = await Task.updateMany(
+      { assignedTo: id },
+      { $pull: { assignedTo: id } }
+    );
+    console.log('Tasks updated to remove intern assignment:', tasksUpdated.modifiedCount);
+
+    const tasksUpdated2 = id !== removed.id ? await Task.updateMany(
+      { assignedTo: removed.id },
+      { $pull: { assignedTo: removed.id } }
+    ) : { modifiedCount: 0 };
+    if (tasksUpdated2.modifiedCount) {
+      console.log('Tasks updated to remove intern assignment by removed.id:', tasksUpdated2.modifiedCount);
+    }
+
+    const docsUpdated = await Document.updateMany(
+      { assignedTo: id },
+      { $pull: { assignedTo: id } }
+    );
+    console.log('Documents updated to remove intern assignment:', docsUpdated.modifiedCount);
+
+    const docsUpdated2 = id !== removed.id ? await Document.updateMany(
+      { assignedTo: removed.id },
+      { $pull: { assignedTo: removed.id } }
+    ) : { modifiedCount: 0 };
+    if (docsUpdated2.modifiedCount) {
+      console.log('Documents updated to remove intern assignment by removed.id:', docsUpdated2.modifiedCount);
+    }
+
+    // Delete the user account for this intern too, so they must register/login again
+    let userDeleted = null;
+    const userById = await User.findOneAndDelete({ id });
+    if (userById) {
+      userDeleted = userById;
+      console.log('Deleted user account by id:', id);
+    } else {
+      const userByEmail = await User.findOneAndDelete({ email: removed.email });
+      if (userByEmail) {
+        userDeleted = userByEmail;
+        console.log('Deleted user account by email:', removed.email);
+      }
+    }
     
     res.json({ 
       success: true, 
       message: 'Intern and all related records deleted successfully',
       deletedIntern: removed.id,
       attendanceRecordsDeleted: attendanceDeleted.deletedCount + attendanceDeleted2.deletedCount,
-      updatesDeleted: updatesDeleted.deletedCount + updatesDeleted2.deletedCount
+      updatesDeleted: updatesDeleted.deletedCount + updatesDeleted2.deletedCount,
+      tasksAssignmentsRemoved: tasksUpdated.modifiedCount + tasksUpdated2.modifiedCount,
+      documentsAssignmentsRemoved: docsUpdated.modifiedCount + docsUpdated2.modifiedCount,
+      userAccountDeleted: !!userDeleted
     });
   } catch (err) {
     console.error('Delete error:', err);

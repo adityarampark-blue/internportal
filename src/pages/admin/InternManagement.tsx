@@ -18,22 +18,28 @@ const emptyIntern: Intern = {
   id: '', name: '', email: '', phone: '', department: '', startDate: '', endDate: '', status: 'active', avatar: '', group: '',
 };
 
-const normalizeInternId = (id: string, index: number) => {
-  if (id.startsWith('IN')) return id;
-  return `IN${String(index + 1).padStart(3, '0')}`;
+const formatInternId = (id: string) => {
+  if (!id) return id;
+  if (id.toUpperCase().startsWith('IN')) return id.toUpperCase();
+  const num = Number(id);
+  if (!Number.isNaN(num)) {
+    return `IN${String(num).padStart(3, '0')}`;
+  }
+  return id;
 };
 
 const nextInternId = (interns: Intern[]) => {
-  const regex = /^IN(\d+)$/;
-  const max = interns.reduce((acc, intern) => {
-    const m = intern.id.match(regex);
-    if (m) {
-      const n = Number(m[1]);
-      return Number.isNaN(n) ? acc : Math.max(acc, n);
-    }
-    return acc;
-  }, 0);
-  return `IN${String(max + 1).padStart(3, '0')}`;
+  const ids = interns.flatMap(i => {
+    const formattedMatch = i.id.match(/^IN(\d+)$/i);
+    const numeric = Number(i.id);
+    const values: number[] = [];
+    if (formattedMatch) values.push(Number(formattedMatch[1]));
+    if (!Number.isNaN(numeric)) values.push(numeric);
+    return values;
+  });
+
+  const maxValue = ids.length > 0 ? Math.max(...ids) : 0;
+  return `IN${String(maxValue + 1).padStart(3, '0')}`;
 };
 
 const InternManagement = () => {
@@ -63,11 +69,17 @@ const InternManagement = () => {
     return d.toISOString().split('T')[0];
   };
 
-  const filtered = interns.filter(i =>
-    i.name.toLowerCase().includes(search.toLowerCase()) ||
-    i.department.toLowerCase().includes(search.toLowerCase()) ||
-    i.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = interns.filter(i => {
+    const formattedId = formatInternId(i.id).toLowerCase();
+    const query = search.toLowerCase();
+    return (
+      i.id.toLowerCase().includes(query) ||
+      formattedId.includes(query) ||
+      i.name.toLowerCase().includes(query) ||
+      i.department.toLowerCase().includes(query) ||
+      i.email.toLowerCase().includes(query)
+    );
+  });
 
   const openAdd = () => {
     setEditing(null);
@@ -159,7 +171,7 @@ const InternManagement = () => {
         // in case deferred sync issue, try refresh list
         try {
           const fresh = await getInterns();
-          setInterns(fresh.map((intern, idx) => ({ ...intern, id: normalizeInternId(intern.id, idx) })));
+          setInterns(fresh);
         } catch {
           // ignore
         }
@@ -185,7 +197,7 @@ const InternManagement = () => {
     (async () => {
       try {
         const [data, pending] = await Promise.all([getInterns(), getPending()]);
-        const normalized = data.map((intern, idx) => ({ ...intern, id: normalizeInternId(intern.id || '', idx) }));
+        const normalized = data.map((intern, idx) => ({ ...intern }));
         const deduped: Intern[] = [];
         const seen = new Set<string>();
         normalized.forEach(intern => {
@@ -217,7 +229,7 @@ const InternManagement = () => {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search interns..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <Input placeholder="Search by ID, name, department, or email" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
       </div>
 
       <Card>
@@ -240,7 +252,7 @@ const InternManagement = () => {
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No interns found</TableCell></TableRow>
                 ) : filtered.map(intern => (
                   <TableRow key={intern.id}>
-                    <TableCell className="text-muted-foreground">{intern.id}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatInternId(intern.id)}</TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{intern.name}</p>
@@ -294,7 +306,7 @@ const InternManagement = () => {
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
               <Label>Intern ID *</Label>
-              <Input value={form.id} onChange={e => updateField('id', e.target.value)} placeholder="e.g. IN001" />
+              <Input value={formatInternId(form.id)} onChange={e => updateField('id', e.target.value)} placeholder="Auto-generated ID" readOnly={!editing} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
