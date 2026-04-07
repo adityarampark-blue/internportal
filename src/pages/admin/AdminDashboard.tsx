@@ -8,8 +8,15 @@ import { getPending, approveUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { Intern } from '@/data/types';
 
-const formatInternId = (id?: string) => {
-  return id || '';
+const formatInternId = (id: string | undefined) => {
+  if (!id) return '';
+  if (id.startsWith('IN00')) return id;
+  if (/^\d+$/.test(id)) return `IN00${id}`;
+  if (id.startsWith('IN')) {
+    const raw = id.substring(2);
+    if (/^\d+$/.test(raw) && raw.length < 3) return `IN00${parseInt(raw, 10)}`;
+  }
+  return id;
 };
 
 const AdminDashboard = () => {

@@ -18,20 +18,29 @@ const emptyIntern: Intern = {
   id: '', name: '', email: '', phone: '', department: '', startDate: '', endDate: '', status: 'active', avatar: '', group: '',
 };
 
-const formatInternId = (id: string) => id || '';
+const formatInternId = (id: string) => {
+  if (!id) return '';
+  if (id.startsWith('IN00')) return id;
+  if (/^\d+$/.test(id)) return `IN00${id}`;
+  if (id.startsWith('IN')) {
+    const raw = id.substring(2);
+    if (/^\d+$/.test(raw) && raw.length < 3) return `IN00${parseInt(raw, 10)}`;
+  }
+  return id;
+};
 
 const nextInternId = (interns: Intern[]) => {
   const ids = interns.flatMap(i => {
-    const formattedMatch = i.id.match(/^I[NB](\d+)$/i);
+    const formattedMatch = i.id.match(/^I[NB]0*(\d+)$/i);
     const numeric = Number(i.id);
     const values: number[] = [];
     if (formattedMatch) values.push(Number(formattedMatch[1]));
     if (!Number.isNaN(numeric)) values.push(numeric);
-    return values;
+    return values.filter(v => v < 100000); // Filter out huge timestamps
   });
 
   const maxValue = ids.length > 0 ? Math.max(...ids) : 0;
-  return `IN${String(maxValue + 1).padStart(3, '0')}`;
+  return `IN00${maxValue + 1}`;
 };
 
 const InternManagement = () => {

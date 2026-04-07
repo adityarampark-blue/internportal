@@ -54,7 +54,7 @@ router.post('/approve/:id', async (req, res) => {
       { $inc: { seq: 1 } },
       { new: true, upsert: true }
     );
-    const nextId = `IN${String(counter.seq).padStart(3, '0')}`;
+    const nextId = `IN00${counter.seq}`;
 
     // Update User record to correctly be marked approved AND sync its ID to IN00X format
     const u = await User.findOneAndUpdate({ id }, { approved: true, id: nextId }, { new: true });

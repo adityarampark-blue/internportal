@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
       { new: true, upsert: true }
     );
     
-    const nextId = `IN${String(counter.seq).padStart(3, '0')}`;
+    const nextId = `IN00${counter.seq}`;
     
     // Create intern with auto-generated ID
     const internData = { ...data, id: nextId };
