@@ -47,12 +47,23 @@ router.post('/approve/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const { group } = req.body;
-    const u = await User.findOneAndUpdate({ id }, { approved: true }, { new: true });
+    
+    const Counter = require('../models/Counter');
+    const counter = await Counter.findOneAndUpdate(
+      { id: 'internId' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    const nextId = `IN${String(counter.seq).padStart(3, '0')}`;
+
+    // Update User record to correctly be marked approved AND sync its ID to IN00X format
+    const u = await User.findOneAndUpdate({ id }, { approved: true, id: nextId }, { new: true });
     if (!u) return res.status(404).json({ error: 'User not found' });
-    // Create Intern record
+    
+    // Create Intern record with proper sequential identity
     const Intern = require('../models/Intern');
     const intern = new Intern({
-      id: u.id,
+      id: nextId,
       name: u.name,
       email: u.email,
       phone: u.phone,
@@ -61,7 +72,8 @@ router.post('/approve/:id', async (req, res) => {
       status: 'active'
     });
     await intern.save();
-    res.json({ id: u.id, email: u.email, name: u.name, approved: u.approved });
+    
+    res.json({ id: nextId, email: u.email, name: u.name, approved: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

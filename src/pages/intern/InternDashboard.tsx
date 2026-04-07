@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getInterns, getTasks, getAttendance, getMeetings, getDocuments } from '@/lib/api';
+import { getInterns, getTasks, getAttendance, getMeetings, getUpdates } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, ClipboardList, Video } from 'lucide-react';
@@ -14,8 +14,8 @@ const InternDashboard = () => {
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [myAttendance, setMyAttendance] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [showPresentDetails, setShowPresentDetails] = useState(false);
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'attendance' | 'tasks' | 'meetings' | 'documents' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const InternDashboard = () => {
           getTasks(),
           getAttendance(),
           getMeetings(),
-          getDocuments(),
+          getUpdates().catch(() => []),
         ]);
         
         const currentIntern = interns.find((i: Intern) => i.name === user?.name || i.email === user?.email);
@@ -38,11 +38,11 @@ const InternDashboard = () => {
         if (normalizedIntern) {
           setMyTasks(tasks.filter((t: any) => (t.assignedTo || []).includes(normalizedIntern.id) || t.group === normalizedIntern.group));
           setMyAttendance(attendance.filter((a: any) => a.internId === normalizedIntern.id));
-          setDocuments(documentsList.filter((d: any) => (d.assignedTo || []).includes(normalizedIntern.id)));
+          setUpdates(documentsList.filter((u: any) => u.internId === normalizedIntern.id));
           setMeetings(meetingsList.filter((m: any) => !m.group || m.group === normalizedIntern.group));
         } else {
           setMeetings(meetingsList);
-          setDocuments([]);
+          setUpdates([]);
         }
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -98,110 +98,118 @@ const InternDashboard = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <button
-          className="stat-card text-left"
+          className={`stat-card text-left transition-colors ${activeTab === 'attendance' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
           type="button"
-          onClick={() => setShowPresentDetails(prev => !prev)}
+          onClick={() => setActiveTab(prev => prev === 'attendance' ? null : 'attendance')}
         >
           <CalendarDays className="w-5 h-5 text-primary mb-2" />
           <p className="text-2xl font-bold text-foreground">{presentDays}</p>
           <p className="text-sm text-muted-foreground">Days Present</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {showPresentDetails ? 'Hide present day details' : 'Click to view present days'}
-          </p>
         </button>
-        <div className="stat-card">
+        <button
+          className={`stat-card text-left transition-colors ${activeTab === 'tasks' ? 'ring-2 ring-warning bg-warning/5' : ''}`}
+          type="button"
+          onClick={() => setActiveTab(prev => prev === 'tasks' ? null : 'tasks')}
+        >
           <ClipboardList className="w-5 h-5 text-warning mb-2" />
           <p className="text-2xl font-bold text-foreground">{pendingTasksCount}</p>
           <p className="text-sm text-muted-foreground">Pending Tasks</p>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button
+          className={`stat-card text-left transition-colors ${activeTab === 'meetings' ? 'ring-2 ring-info bg-info/5' : ''}`}
+          type="button"
+          onClick={() => setActiveTab(prev => prev === 'meetings' ? null : 'meetings')}
+        >
           <Video className="w-5 h-5 text-info mb-2" />
           <p className="text-2xl font-bold text-foreground">{upcomingMeetings.length}</p>
           <p className="text-sm text-muted-foreground">Upcoming Meetings</p>
-        </div>
+        </button>
+        <button
+          className={`stat-card text-left transition-colors ${activeTab === 'updates' ? 'ring-2 ring-emerald-500 bg-emerald-500/5' : ''}`}
+          type="button"
+          onClick={() => setActiveTab(prev => prev === 'updates' ? null : 'updates')}
+        >
+          <ClipboardList className="w-5 h-5 text-emerald-500 mb-2" />
+          <p className="text-2xl font-bold text-foreground">{updates.length}</p>
+          <p className="text-sm text-muted-foreground">Daily Updates</p>
+        </button>
       </div>
 
-      {showPresentDetails && (
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Present Days</CardTitle></CardHeader>
-          <CardContent>
-            {presentRecords.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-4">No present days yet.</p>
-            ) : (
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                {presentRecords.map((a: any) => (
-                  <li key={a.id}>{a.date} {a.checkIn ? `- checked in at ${a.checkIn}` : ''}</li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <div className="mt-6">
+        {activeTab === 'attendance' && (
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <CardHeader><CardTitle className="text-lg">Present Days</CardTitle></CardHeader>
+            <CardContent>
+              {presentRecords.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No present days yet.</p>
+              ) : (
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {presentRecords.map((a: any) => (
+                    <li key={a.id}>{a.date} {a.checkIn ? `- checked in at ${a.checkIn}` : ''}</li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Pending Tasks</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {pendingTasks.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">No pending tasks.</p>
-          ) : pendingTasks.map(t => (
-            <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
-              <div>
-                <p className="text-sm font-medium text-foreground">{t.title}</p>
-                <p className="text-xs text-muted-foreground">Due: {t.dueDate}</p>
-              </div>
-              <Badge variant={t.status === 'completed' ? 'outline' : t.status === 'in-progress' ? 'default' : 'secondary'}>{t.status}</Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        {activeTab === 'tasks' && (
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <CardHeader><CardTitle className="text-lg">My Tasks</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {myTasks.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No tasks assigned.</p>
+              ) : myTasks.map(t => (
+                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{t.title}</p>
+                    <p className="text-xs text-muted-foreground">Due: {t.dueDate}</p>
+                  </div>
+                  <Badge variant={t.status === 'completed' ? 'outline' : t.status === 'in-progress' ? 'default' : 'secondary'}>{t.status}</Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Upcoming Meetings</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          {upcomingMeetings.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">No upcoming meetings.</p>
-          ) : upcomingMeetings.map(m => (
-            <div key={m.id} className="p-3 rounded-lg bg-muted/40">
-              <p className="text-sm font-medium text-foreground">{m.title}</p>
-              <p className="text-xs text-muted-foreground">{m.date} {m.time} {m.link ? `• Join: ${m.link}` : ''}</p>
-              {m.description && <p className="text-xs text-muted-foreground">{m.description}</p>}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        {activeTab === 'meetings' && (
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <CardHeader><CardTitle className="text-lg">Upcoming Meetings</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {upcomingMeetings.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No upcoming meetings.</p>
+              ) : upcomingMeetings.map(m => (
+                <div key={m.id} className="p-3 rounded-lg bg-muted/40">
+                  <p className="text-sm font-medium text-foreground">{m.title}</p>
+                  <p className="text-xs text-muted-foreground">{m.date} {m.time} {m.link ? `• Join: ${m.link}` : ''}</p>
+                  {m.description && <p className="text-xs text-muted-foreground">{m.description}</p>}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Documents</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          {documents.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">No documents shared yet.</p>
-          ) : documents.map(d => (
-            <div key={d.id} className="p-3 rounded-lg bg-muted/40">
-              <p className="text-sm font-medium text-foreground">{d.name}</p>
-              <p className="text-xs text-muted-foreground">{d.type} • {d.size} • {d.uploadedAt}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-lg">My Tasks</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {myTasks.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">No tasks assigned</p>
-          ) : myTasks.map(t => (
-            <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
-              <div>
-                <p className="text-sm font-medium text-foreground">{t.title}</p>
-                <p className="text-xs text-muted-foreground">Due: {t.dueDate}</p>
-              </div>
-              <Badge variant={t.status === 'completed' ? 'outline' : t.status === 'in-progress' ? 'default' : 'secondary'}>{t.status}</Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        {activeTab === 'updates' && (
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <CardHeader><CardTitle className="text-lg">Daily Updates</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {updates.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No daily updates yet.</p>
+              ) : updates.map((u: any) => (
+                <div key={u.id} className="p-3 rounded-lg bg-muted/40">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-foreground">{u.date}</span>
+                    <span className="text-xs text-muted-foreground">· {u.hoursWorked}h</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{u.content}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
