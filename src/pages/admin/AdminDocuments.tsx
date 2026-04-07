@@ -769,8 +769,14 @@ const AdminDocuments = () => {
 
       {/* Upload Dialog */}
       {dialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 font-sans"
+          onClick={() => setDialogOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Upload Document</h2>
@@ -797,10 +803,10 @@ const AdminDocuments = () => {
                         setForm(p => ({ ...p, name: file.name }));
                       }
                     }}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-4 border-2 border-dashed rounded-lg bg-gray-50 text-gray-700 cursor-pointer"
                   />
                   {selectedFile && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 mt-2">
                       {selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)
                     </p>
                   )}
@@ -847,10 +853,22 @@ const AdminDocuments = () => {
                   <label className="block text-sm font-medium mb-2">Group</label>
                   <select
                     value={form.groupName}
-                    onChange={e => setForm(p => ({ ...p, groupName: e.target.value }))}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === '__all__') {
+                        const allIds = interns.map((i: any) => i.id);
+                        setForm(p => ({ ...p, groupName: '', assignedTo: allIds.join(', ') }));
+                      } else if (v === '') {
+                        setForm(p => ({ ...p, groupName: '', assignedTo: '' }));
+                      } else {
+                        const groupMembers = interns.filter((i: any) => i.group === v).map((i: any) => i.id);
+                        setForm(p => ({ ...p, groupName: v, assignedTo: groupMembers.join(', ') }));
+                      }
+                    }}
                     className="w-full p-2 border rounded"
                   >
                     <option value="">Select a group</option>
+                    <option value="__all__">All Groups</option>
                     {groups.map(group => (
                       <option key={group} value={group}>{group}</option>
                     ))}
@@ -865,7 +883,7 @@ const AdminDocuments = () => {
                     value={form.assignedTo}
                     onChange={e => setForm(p => ({ ...p, assignedTo: e.target.value }))}
                     className="w-full p-2 border rounded"
-                    placeholder="intern_001, intern_002"
+                    placeholder="IN001, IN002"
                   />
                 </div>
               </div>
@@ -892,8 +910,17 @@ const AdminDocuments = () => {
 
       {/* Delete Confirmation Dialog */}
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 font-sans"
+          onClick={() => {
+            setDeleteConfirmOpen(false);
+            setDocumentToDelete(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
               <p className="text-gray-600 mb-6">

@@ -8,6 +8,10 @@ import { getPending, approveUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import { Intern } from '@/data/types';
 
+const formatInternId = (id?: string) => {
+  return id || '';
+};
+
 const AdminDashboard = () => {
   type AttendanceRecord = { id: string; internId: string; date: string; status: 'present' | 'absent'; checkIn?: string };
   type Activity = { message: string; time: string };
@@ -117,7 +121,7 @@ const AdminDashboard = () => {
                 <p className="text-sm font-bold text-blue-600 bg-blue-50 p-2 rounded">📋 All Interns ({totalInterns})</p>
                 <div className="space-y-1 text-sm">
                   {(interns.length > 0 ? interns : []).slice(0, 10).map(i => (
-                    <p key={i.id} className="text-xs text-foreground">{i.id} · {i.name} · {i.email}</p>
+                    <p key={i.id} className="text-xs text-foreground">{formatInternId(i.id)} - {i.name} · {i.email}</p>
                   ))}
                   {interns.length > 10 && <p className="text-xs text-muted-foreground">{interns.length - 10} more interns not shown.</p>}
                 </div>
@@ -128,7 +132,7 @@ const AdminDashboard = () => {
                 <p className="text-sm font-bold text-green-600 bg-green-50 p-2 rounded">✓ Active Interns ({activeInterns})</p>
                 <div className="space-y-1 text-sm">
                   {interns.filter(i => i.status === 'active').slice(0, 10).map(i => (
-                    <p key={i.id} className="text-xs text-foreground">{i.id} · {i.name} · {i.email} · {i.group || 'No group'}</p>
+                    <p key={i.id} className="text-xs text-foreground">{formatInternId(i.id)} - {i.name} · {i.email} · {i.group || 'No group'}</p>
                   ))}
                   {interns.filter(i => i.status === 'active').length > 10 && <p className="text-xs text-muted-foreground">{interns.filter(i => i.status === 'active').length - 10} more active interns not shown.</p>}
                 </div>
@@ -146,7 +150,7 @@ const AdminDashboard = () => {
                         {groupInterns.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No interns in this group</p>
                         ) : groupInterns.map(i => (
-                          <p key={i.id} className="text-xs text-foreground">{i.id} · {i.name} · {i.email}</p>
+                          <p key={i.id} className="text-xs text-foreground">{formatInternId(i.id)} - {i.name} · {i.email}</p>
                         ))}
                       </div>
                     </details>
@@ -163,7 +167,7 @@ const AdminDashboard = () => {
                   <div className="space-y-2">
                     {pendingUsers.map(u => (
                       <div key={u.id} className="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                        <p className="text-sm font-semibold text-foreground">{u.id} · {u.name}</p>
+                        <p className="text-sm font-semibold text-foreground">{formatInternId(u.id)} - {u.name}</p>
                         <p className="text-xs text-muted-foreground">{u.email} · {u.role}</p>
                       </div>
                     ))}
@@ -182,7 +186,7 @@ const AdminDashboard = () => {
                       const intern = interns.find(i => i.id === a.internId);
                       return (
                         <div key={a.id} className="p-3 rounded-lg bg-green-50 border border-green-100">
-                          <p className="text-sm font-semibold">{intern?.id || a.internId} - {intern?.name || 'Unknown'}</p>
+                          <p className="text-sm font-semibold">{formatInternId(intern?.id || a.internId)} - {intern?.name || 'Unknown'}</p>
                           <p className="text-xs text-muted-foreground">{intern?.email || ''}</p>
                           <p className="text-xs">Checked in: {a.checkIn || '—'}</p>
                         </div>
@@ -233,9 +237,9 @@ const AdminDashboard = () => {
               <div key={i.id} className="p-4 rounded-lg bg-white border border-purple-100 shadow-sm hover:shadow-md transition">
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-4 h-4 text-purple-600" />
-                  <span className="font-medium text-purple-800">{i.id}</span>
+                  <span className="font-medium text-purple-800">{formatInternId(i.id)}</span>
                 </div>
-                <p className="text-sm font-semibold">{i.name}</p>
+                <p className="text-sm font-semibold">{formatInternId(i.id)} - {i.name}</p>
                 <p className="text-xs text-muted-foreground">{i.email}</p>
                 <Badge variant="secondary" className="mt-1">{i.group || 'No group'}</Badge>
               </div>

@@ -6,13 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, ClipboardList, Video } from 'lucide-react';
 import { Intern } from '@/data/types';
 
-const formattedInternId = (id?: string) => {
-  if (!id) return '';
-  if (id.toUpperCase().startsWith('IN')) return id.toUpperCase();
-  const numeric = parseInt(id.replace(/\D/g, ''), 10);
-  if (!Number.isNaN(numeric)) return `IN${String(numeric).padStart(3, '0')}`;
-  return id;
-};
+const formattedInternId = (id?: string) => id || '';
 
 const InternDashboard = () => {
   const { user } = useAuth();
@@ -72,7 +66,7 @@ const InternDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome, {user?.name}!</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome, {intern ? `${formattedInternId(intern.id)} - ` : ''}{user?.name}!</h1>
         <p className="text-muted-foreground mt-1">Your internship dashboard</p>
       </div>
 

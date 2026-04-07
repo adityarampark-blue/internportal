@@ -31,6 +31,16 @@ type AdminAttendanceRecord = { id: string; internId: string; date?: string; stat
 
 type InternInfo = { id: string; name: string; group: string };
 
+const formatInternId = (id?: string) => {
+  if (!id) return '';
+  const upper = id.toUpperCase();
+  if (upper.startsWith('IN')) return upper;
+  if (upper.startsWith('IB')) return `IN${upper.slice(2)}`;
+  const numeric = parseInt(id.replace(/\D/g, ''), 10);
+  if (!Number.isNaN(numeric)) return `IN${String(numeric).padStart(3, '0')}`;
+  return id;
+};
+
 const AdminAttendance = () => {
   const [attendance, setAttendance] = useState<AdminAttendanceRecord[]>([]);
   const [interns, setInterns] = useState<InternInfo[]>([]);
@@ -341,8 +351,8 @@ const AdminAttendance = () => {
                                 onCheckedChange={() => toggleInternSelection(intern.id)}
                               />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{intern.name}</p>
-                                <p className="text-xs text-muted-foreground truncate">ID: {intern.id}</p>
+                                <p className="text-sm font-medium truncate">{formatInternId(intern.id)} - {intern.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">ID: {formatInternId(intern.id)}</p>
                               </div>
                               {internsWithAttendance.has(intern.id) && (
                                 <Badge variant="secondary" className="ml-1 text-xs">
@@ -515,7 +525,7 @@ const AdminAttendance = () => {
                           const intern = interns.find(i => i.id === a.internId);
                           return (
                             <TableRow key={a.id}>
-                              <TableCell className="font-medium text-foreground">{a.internId}</TableCell>
+                              <TableCell className="font-medium text-foreground">{formatInternId(a.internId)}</TableCell>
                               <TableCell className="text-foreground">{intern?.name || 'Unknown'}</TableCell>
                               <TableCell className="text-muted-foreground">{a.date}</TableCell>
                               <TableCell>
@@ -585,8 +595,8 @@ const AdminAttendance = () => {
                               className="mt-1"
                             />
                             <div className="flex-1">
-                              <p className="font-semibold text-foreground">{intern.name}</p>
-                              <p className="text-sm text-muted-foreground">ID: {intern.id}</p>
+                              <p className="font-semibold text-foreground">{formatInternId(intern.id)} - {intern.name}</p>
+                              <p className="text-sm text-muted-foreground">ID: {formatInternId(intern.id)}</p>
                               <p className="text-sm text-muted-foreground">Group: {intern.group}</p>
                             </div>
                             {isSelected && (

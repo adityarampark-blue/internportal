@@ -32,7 +32,7 @@ const AdminMeetings = () => {
     }
 
     try {
-      const payload = { id: Date.now().toString(), ...form, link };
+      const payload = { id: Date.now().toString(), ...form, link, group: form.group === 'all' ? '' : form.group };
       const created = await createMeeting(payload);
       setMeetings(prev => [...prev, created]);
       setDialogOpen(false);
@@ -108,6 +108,7 @@ const AdminMeetings = () => {
               <Select value={form.group} onValueChange={v => setForm(p => ({ ...p, group: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
                   {groups.map(group => <SelectItem key={group} value={group}>{group}</SelectItem>)}
                 </SelectContent>
               </Select>

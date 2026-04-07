@@ -17,39 +17,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+const Counter = require('../models/Counter');
+
+//... Inside router.post('/')
 router.post('/', async (req, res) => {
   try {
     const data = req.body;
     console.log('Creating intern with data:', data);
     
-    // Get all existing interns to find the highest ID
-    const allInterns = await Intern.find({}, 'id').sort({ id: -1 });
+    // Atomically increment the sequence counter
+    const counter = await Counter.findOneAndUpdate(
+      { id: 'internId' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
     
-    // Extract numeric parts from IDs (support both IN001 format and plain numbers)
-    let maxId = 0;
-    for (const intern of allInterns) {
-      const idStr = intern.id;
-      let numericId = 0;
-      
-      // Check if it's INXXX format
-      const match = idStr.match(/^IN(\d+)$/i);
-      if (match) {
-        numericId = parseInt(match[1], 10);
-      } else {
-        // Try to parse as plain number
-        const num = parseInt(idStr, 10);
-        if (!isNaN(num)) {
-          numericId = num;
-        }
-      }
-      
-      if (numericId > maxId) {
-        maxId = numericId;
-      }
-    }
-    
-    // Generate next sequential ID
-    const nextId = `IN${String(maxId + 1).padStart(3, '0')}`;
+    const nextId = `IN${String(counter.seq).padStart(3, '0')}`;
     
     // Create intern with auto-generated ID
     const internData = { ...data, id: nextId };

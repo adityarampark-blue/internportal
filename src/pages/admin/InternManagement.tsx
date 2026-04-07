@@ -18,19 +18,11 @@ const emptyIntern: Intern = {
   id: '', name: '', email: '', phone: '', department: '', startDate: '', endDate: '', status: 'active', avatar: '', group: '',
 };
 
-const formatInternId = (id: string) => {
-  if (!id) return id;
-  if (id.toUpperCase().startsWith('IN')) return id.toUpperCase();
-  const num = Number(id);
-  if (!Number.isNaN(num)) {
-    return `IN${String(num).padStart(3, '0')}`;
-  }
-  return id;
-};
+const formatInternId = (id: string) => id || '';
 
 const nextInternId = (interns: Intern[]) => {
   const ids = interns.flatMap(i => {
-    const formattedMatch = i.id.match(/^IN(\d+)$/i);
+    const formattedMatch = i.id.match(/^I[NB](\d+)$/i);
     const numeric = Number(i.id);
     const values: number[] = [];
     if (formattedMatch) values.push(Number(formattedMatch[1]));
@@ -294,10 +286,10 @@ const InternManagement = () => {
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Intern' : 'Add New Intern'}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-4 py-2 max-h-[75vh] overflow-y-auto px-1">
             <div className="space-y-2">
               <Label>Intern ID *</Label>
-              <Input value={editing ? formatInternId(form.id) : 'Auto-generated'} onChange={e => updateField('id', e.target.value)} placeholder="Auto-generated ID" readOnly={!editing} />
+              <Input value={editing ? formatInternId(form.id) : nextInternId(interns)} onChange={e => updateField('id', e.target.value)} placeholder="Auto-generated ID" disabled />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -332,18 +324,18 @@ const InternManagement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Group</Label>
-                <Select value={isCustomGroup ? '__new' : form.group} onValueChange={v => {
+                <Select value={isCustomGroup ? '__new' : (form.group || 'none')} onValueChange={v => {
                   if (v === '__new') {
                     setIsCustomGroup(true);
                     updateField('group', '');
                   } else {
                     setIsCustomGroup(false);
-                    updateField('group', v);
+                    updateField('group', v === 'none' ? '' : v);
                   }
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- Select a group --</SelectItem>
+                    <SelectItem value="none">-- Select a group --</SelectItem>
                     {groups.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                     <SelectItem value="__new">+ Create new group</SelectItem>
                   </SelectContent>
@@ -354,15 +346,16 @@ const InternManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label>Duration (months)</Label>
-                <Select value={String(durationMonths)} onValueChange={v => {
-                  const months = Number(v);
+                <Select value={durationMonths ? String(durationMonths) : 'none'} onValueChange={v => {
+                  const months = v === 'none' ? 0 : Number(v);
                   setDurationMonths(months);
                   if (form.startDate) {
-                    updateField('endDate', addMonthsToDate(form.startDate, months));
+                    updateField('endDate', months ? addMonthsToDate(form.startDate, months) : form.endDate);
                   }
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="1">1 month</SelectItem>
                     <SelectItem value="2">2 months</SelectItem>
                     <SelectItem value="3">3 months</SelectItem>
