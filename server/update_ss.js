@@ -38,7 +38,7 @@ async function fix() {
       if (!i.id.toUpperCase().startsWith('IN')) {
           const num = parseInt(i.id.replace(/\\D/g, ''), 10);
           if (!isNaN(num) && Number.isInteger(num)) {
-             const newId = `IN${String(num).padStart(3, '0')}`;
+             const newId = `IN00${num}`;
              console.log(`Updating ${i.id} -> ${newId}`);
              i.id = newId;
              await i.save();

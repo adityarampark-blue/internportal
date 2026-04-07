@@ -432,11 +432,21 @@ const emptyIntern: Intern = {
   id: '', name: '', email: '', phone: '', department: '', startDate: '', endDate: '', status: 'active', avatar: '', group: '',
 };
 
+const formatInternId = (id: string) => id || '';
 
-// Add this at the very top of the file, before the component
-console.log('InternManagement component is loading');
+const nextInternId = (interns: Intern[]) => {
+  const ids = interns.flatMap(i => {
+    const formattedMatch = i.id.match(/^I[NB](\d+)$/i);
+    const numeric = Number(i.id);
+    const values: number[] = [];
+    if (formattedMatch) values.push(Number(formattedMatch[1]));
+    if (!Number.isNaN(numeric)) values.push(numeric);
+    return values;
+  });
 
-  // ... rest of your code
+  const maxValue = ids.length > 0 ? Math.max(...ids) : 0;
+  return `IN${String(maxValue + 1).padStart(3, '0')}`;
+};
 
 const InternManagement = () => {
   const [interns, setInterns] = useState<Intern[]>([]);

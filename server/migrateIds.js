@@ -30,7 +30,7 @@ async function fix() {
     } else if (!oldId.toUpperCase().startsWith('IN')) {
       const num = parseInt(oldId.replace(/\D/g, ''), 10);
       if (!isNaN(num) && Number.isInteger(num)) {
-        newId = `IN${String(num).padStart(3, '0')}`;
+        newId = `IN00${num}`;
       }
     }
     

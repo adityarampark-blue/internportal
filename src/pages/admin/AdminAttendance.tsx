@@ -31,13 +31,14 @@ type AdminAttendanceRecord = { id: string; internId: string; date?: string; stat
 
 type InternInfo = { id: string; name: string; group: string };
 
-const formatInternId = (id?: string) => {
+const formatInternId = (id: string | undefined) => {
   if (!id) return '';
-  const upper = id.toUpperCase();
-  if (upper.startsWith('IN')) return upper;
-  if (upper.startsWith('IB')) return `IN${upper.slice(2)}`;
-  const numeric = parseInt(id.replace(/\D/g, ''), 10);
-  if (!Number.isNaN(numeric)) return `IN${String(numeric).padStart(3, '0')}`;
+  if (id.startsWith('IN00')) return id;
+  if (/^\d+$/.test(id)) return `IN00${id}`;
+  if (id.startsWith('IN')) {
+    const raw = id.substring(2);
+    if (/^\d+$/.test(raw) && raw.length < 3) return `IN00${parseInt(raw, 10)}`;
+  }
   return id;
 };
 
