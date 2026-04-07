@@ -34,7 +34,7 @@ const AdminTasks = () => {
 
   const handleAdd = () => {
     if (!form.title || !form.dueDate) { toast.error('Title and due date required'); return; }
-    const groupAssignees = form.group ? interns.filter((i:any) => i.group === form.group).map((i:any) => i.id) : [];
+    const groupAssignees = form.group === 'All' ? interns.map((i:any) => i.id) : form.group ? interns.filter((i:any) => i.group === form.group).map((i:any) => i.id) : [];
     const manualAssignees = form.assignedTo ? form.assignedTo.split(',').map(s => s.trim()) : [];
     const assignedTo = Array.from(new Set([...groupAssignees, ...manualAssignees].filter(Boolean)));
 
@@ -42,7 +42,7 @@ const AdminTasks = () => {
       id: Date.now().toString(), title: form.title, description: form.description,
       dueDate: form.dueDate, priority: form.priority, status: 'pending',
       assignedTo,
-      group: form.group,
+      group: form.group === 'All' ? 'All' : form.group,
     };
     setTasks(prev => [...prev, newTask]);
     setDialogOpen(false);
@@ -87,6 +87,7 @@ const AdminTasks = () => {
                 <Select value={form.group} onValueChange={v => setForm(p => ({ ...p, group: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="All">All Groups</SelectItem>
                     {groups.map(group => <SelectItem key={group} value={group}>{group}</SelectItem>)}
                   </SelectContent>
                 </Select>
